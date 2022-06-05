@@ -9,7 +9,7 @@ import Foundation
 
 
 /// Main error enum for the w3w API
-public enum W3WAddressFinderError : Error, CustomStringConvertible, Equatable {
+public enum W3WAddressValidatorError : Error, CustomStringConvertible, Equatable {
   
   // Internal Errors
   case serious(String)
@@ -38,7 +38,7 @@ public enum W3WAddressFinderError : Error, CustomStringConvertible, Equatable {
   }
   
   /// allow this to conform to Equitable
-  public static func == (lhs: W3WAddressFinderError, rhs: W3WAddressFinderError) -> Bool {
+  public static func == (lhs: W3WAddressValidatorError, rhs: W3WAddressValidatorError) -> Bool {
     return lhs.description == rhs.description
   }
   

@@ -49,10 +49,15 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   }
 
   
+  deinit {
+    cancel()
+  }
+
+  
   /// searches near a three word address
   /// - parameter near: the three word address to search near
   /// - parameter completion: called with new nodes when they are available from the call
-  public func search(near: String, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func search(near: String, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
 
     // set up call
     let params = [
@@ -73,7 +78,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   /// given a node in the tree, call for sub nodes
   /// - parameter from: the node to search with
   /// - parameter completion: called with child tree nodes when they are retrieved
-  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
 
     // set up the parameters
     var params:[String:String] = [
@@ -111,7 +116,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   /// get detialed info for a particular node
   /// - parameter for: the node to get details from
   /// - parameter completion: called with a detailed address result
-  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressFinderError?) -> ()) {
+  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressValidatorError?) -> ()) {
     
     // if there is an id for this node
     if let encodedId = leaf.code {
@@ -145,26 +150,32 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
               }
               
             } else {
-              completion(nil, W3WAddressFinderError.server(error?.localizedDescription ?? "Unknown"))
+              completion(nil, W3WAddressValidatorError.server(error?.localizedDescription ?? "Unknown"))
             }
           }
         } else {
-          completion(nil, W3WAddressFinderError.serious("No address found at the index returned by Swift Complete"))
+          completion(nil, W3WAddressValidatorError.serious("No address found at the index returned by Swift Complete"))
         }
         
       } else {
-        completion(nil, W3WAddressFinderError.serious("internal error: leafId - bad encoding"))
+        completion(nil, W3WAddressValidatorError.serious("internal error: leafId - bad encoding"))
       }
       
     } else {
       //completion(W3WStreetAddress(id: leaf.code, address: leaf.name, street: nil, city: nil, postalCode: nil, country: nil))
-      completion(nil, W3WAddressFinderError.infoCalledOnNonLeafValue)
+      completion(nil, W3WAddressValidatorError.infoCalledOnNonLeafValue)
     }
   }
   
   
+  /// cancel any active API calls
+  public func cancel() {
+    swiftComplete?.cancel()
+  }
+
+  
   /// parse JSON data
-  func makeAddressDescriptionResponse(words: String, lastResult: W3WValidatorNodeList?, code: Int?, json: Data?, error: W3WAddressFinderError?, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  func makeAddressDescriptionResponse(words: String, lastResult: W3WValidatorNodeList?, code: Int?, json: Data?, error: W3WAddressValidatorError?, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     if let j = json {
       if code == 200 {
         parseAddresses(words: words, lastResult: lastResult, json: j, completion: completion)
@@ -176,26 +187,26 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   
   
   /// parse errors from JSON data
-  func parseErrors(json: Data, completion: @escaping ([W3WValidatorNodeList], W3WAddressFinderError?) -> ()) {
+  func parseErrors(json: Data, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     if let errors = try? jsonDecoder.decode(SwiftCompleteErrors.self, from: json) {
       print(errors)
-      completion([], W3WAddressFinderError.server(errors.error?.description ?? "Unknown Error"))
+      completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
       return
       
     } else if let errors = try? jsonDecoder.decode(SwiftCompleteSimpleError.self, from: json) {
       print(errors)
-      completion([], W3WAddressFinderError.server(errors.error?.description ?? "Unknown Error"))
+      completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
       return
     }
     
-    completion([], W3WAddressFinderError.server("Unknown Error"))
+    completion([], W3WAddressValidatorError.server("Unknown Error"))
   }
   
   
   /// parse out address info from JSON data
-  func parseAddress(index: Int, words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping (W3WValidatorNodeLeafInfo, W3WAddressFinderError?) -> ()) {
+  func parseAddress(index: Int, words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping (W3WValidatorNodeLeafInfo, W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     if let data = try? jsonDecoder.decode([SwiftCompleteJson].self, from: json) {
@@ -234,7 +245,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   
   
   /// parse out address info from JSON data
-  func parseAddresses(words: String, lastResult: W3WValidatorNodeList?, json: Data, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  func parseAddresses(words: String, lastResult: W3WValidatorNodeList?, json: Data, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     if let data = try? jsonDecoder.decode([SwiftCompleteJson].self, from: json) {

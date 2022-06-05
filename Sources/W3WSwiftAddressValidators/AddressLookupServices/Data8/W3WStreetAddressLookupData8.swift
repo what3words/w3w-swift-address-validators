@@ -35,12 +35,17 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
     self.data8 = W3WRequest(baseUrl: W3WData8Settings.data8Host, parameters: ["key" : key])
     self.data8.set(headers: ["Referer": "w3w.co"])
   }
+  
+  
+  deinit {
+    cancel()
+  }
 
   
   /// searches near a three word address
   /// - parameter near: the three word address to search near
   /// - parameter completion: called with new nodes when they are available from the call
-  public func search(near: String, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func search(near: String, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
 
     // set the Api parameters
     let json: [String: Any] = [
@@ -72,7 +77,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   /// given a node in the tree, call for sub nodes
   /// - parameter from: the node to search with
   /// - parameter completion: called with child tree nodes when they are retrieved
-  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     
     // set up parameters
     let json: [String: Any] = [
@@ -102,7 +107,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   
   /// get detialed info for a particular node
   /// - parameter for: the node to get details from
-  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressFinderError?) -> ()) {
+  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressValidatorError?) -> ()) {
   
     // set up parameters
     let json: [String: Any] = [
@@ -132,32 +137,38 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   }
 
   
+  /// cancel any active API calls
+  public func cancel() {
+    data8?.cancel()
+  }
+  
+  
   /// if an error was returned then parse it for error informaiton
-  func parseErrors(code: Int?, json: Data, completion: @escaping ([W3WValidatorNodeList], W3WAddressFinderError?) -> ()) {
+  func parseErrors(code: Int?, json: Data, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     if let errors = try? jsonDecoder.decode(Data8Errors.self, from: json) {
       print(errors)
-      completion([], W3WAddressFinderError.server(errors.status?.errorMessage ?? "Unknown Error"))
+      completion([], W3WAddressValidatorError.server(errors.status?.errorMessage ?? "Unknown Error"))
       return
       
     } else if let errors = try? jsonDecoder.decode(SwiftCompleteSimpleError.self, from: json) {
       print(errors)
-      completion([], W3WAddressFinderError.server(errors.error?.description ?? "Unknown Error"))
+      completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
       return
 
     } else if let code = code {
-        completion([], W3WAddressFinderError.server("Error code \(code) returned from server"))
+        completion([], W3WAddressValidatorError.server("Error code \(code) returned from server"))
 
     } else {
-      completion([], W3WAddressFinderError.server("Unknown error from server"))
+      completion([], W3WAddressValidatorError.server("Unknown error from server"))
     }
     
   }
   
   
   /// given result data, make the result ndoes
-  func parseAddress(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  func parseAddress(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     // decode JSON
@@ -167,32 +178,40 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
       var addresses = [W3WValidatorNode]()
       
       // loop through JSON data
-      for result in data.results ?? [] {
-        
-        // make a list node if there are a bunch of results
-        if result.container == true {
-          addresses.append(W3WValidatorNodeList(id: result.value, words: words, name: result.label ?? "", nearestPlace: "", subItemCount: result.items))
+      if let results = data.results {
+        for result in results {
           
-        // make a leaf node if this is a final address
-        } else {
-          addresses.append(W3WValidatorNodeLeaf(id: result.value, words: words, name: result.label ?? "", nearestPlace: ""))
+          // make a list node if there are a bunch of results
+          if result.container == true {
+            addresses.append(W3WValidatorNodeList(id: result.value, words: words, name: result.label ?? "", nearestPlace: "", subItemCount: result.items))
+            
+          // make a leaf node if this is a final address
+          } else {
+            addresses.append(W3WValidatorNodeLeaf(id: result.value, words: words, name: result.label ?? "", nearestPlace: ""))
+          }
+        }
+      
+        // complete this call
+        completion(addresses, nil)
+        return
+        
+      // data restuned but no results, so send error
+      } else {
+        if data.status?.success == false {
+          completion([], W3WAddressValidatorError.server(data.status?.errorMessage ?? "unknown error from server"))
         }
       }
-      
-      // complte this call
-      completion(addresses, nil)
-      return
 
     // return any error
     } else {
-      completion([], W3WAddressFinderError.badJson)
+      completion([], W3WAddressValidatorError.badJson)
     }
   }
 
   
   
   /// parse Json data for a leaf node
-  func parseLeaf(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressFinderError?) -> ()) {
+  func parseLeaf(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
     // parse JSON
@@ -235,7 +254,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
     }
 
     // if nothing found then error out
-    completion(nil, W3WAddressFinderError.badJson)
+    completion(nil, W3WAddressValidatorError.badJson)
   }
 
   

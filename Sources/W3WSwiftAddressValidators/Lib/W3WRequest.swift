@@ -17,7 +17,7 @@ import WatchKit
 
 
 /// closure definition for internal HTTP requests
-public typealias W3WRequestResponse = ((_ code: Int?, _ result: Data?, _ error: W3WAddressFinderError?) -> Void)
+public typealias W3WRequestResponse = ((_ code: Int?, _ result: Data?, _ error: W3WAddressValidatorError?) -> Void)
 
 
 /// the method for the HTTPS request
@@ -33,6 +33,8 @@ public class W3WRequest {
   var baseUrl        = ""
   var parameters = [String:String]()
   var headers    = [String:String]()
+  
+  var task: URLSessionDataTask?
   
   // MARK: Constructors
   
@@ -81,19 +83,24 @@ public class W3WRequest {
     if let request = makeRequest(path: path, params: params, json: json, method: method) {
       
       // make the call
-      let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
+      task = URLSession.shared.dataTask(with: request) { (data, response, error) in
         
         // deal with the results, and complete with the info
         self.processResults(data: data, response: response, error: error, completion: completion)
       }
       
       // start the call
-      task.resume()
+      task?.resume()
       
     // if the request object couldn't be made
     } else {
-      completion(nil, nil, W3WAddressFinderError.serious("Could not instantiate URLRequest for " + path))
+      completion(nil, nil, W3WAddressValidatorError.serious("Could not instantiate URLRequest for " + path))
     }
+  }
+  
+  
+  public func cancel() {
+    task?.cancel()
   }
   
   
@@ -167,16 +174,19 @@ public class W3WRequest {
     //print("got results: ", code ?? -1)
     
     guard let data = data else {
-      completion(code, nil, W3WAddressFinderError.server(error?.localizedDescription ?? "unknown server error"))
+      completion(code, nil, W3WAddressValidatorError.server(error?.localizedDescription ?? "unknown server error"))
+      task = nil
       return
     }
     
     if data.count == 0 {
       completion(code, nil, nil)
+      task = nil
       return
     }
     
     completion(code, data, nil)
+    task = nil
   }
   
   

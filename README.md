@@ -1,4 +1,4 @@
-# <img valign='top' src="https://what3words.com/assets/images/w3w_square_red.png" width="32" height="32" alt="what3words">&nbsp;w3w-swift-w3w-swift-address-validators
+# <img valign='top' src="https://what3words.com/assets/images/w3w_square_red.png" width="32" height="32" alt="what3words">&nbsp;w3w-swift-address-validators
 
 Overview
 --------

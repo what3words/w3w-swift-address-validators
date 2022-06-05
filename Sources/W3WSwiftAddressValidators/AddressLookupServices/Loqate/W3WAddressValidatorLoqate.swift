@@ -50,10 +50,16 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   }
   
   
+  deinit {
+    cancel()
+  }
+
+  
+  
   /// searches near a three word address
   /// - parameter near: the three word address to search near
   /// - parameter completion: called with new nodes when they are available from the call
-  public func search(near: String, completion: @escaping  ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func search(near: String, completion: @escaping  ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     
     // convert three word address to coordinates
     w3w.convertToCoordinates(words: near) { square, error in
@@ -82,7 +88,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   /// given a node in the tree, call for sub nodes
   /// - parameter from: the node to search with
   /// - parameter completion: called with child tree nodes when they are retrieved
-  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  public func list(from: W3WValidatorNodeList, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     
     // if the data we want is already in the tree, then return it
     if let children = from.children {
@@ -106,7 +112,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   
   /// get detialed info for a particular node
   /// - parameter for: the node to get details from
-  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressFinderError?) -> ()) {
+  public func info(for leaf: W3WValidatorNodeLeaf, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressValidatorError?) -> ()) {
     // set up the call
     let params = [
       "Id": leaf.code ?? ""
@@ -117,7 +123,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
 
       // notify about any error
       if let e = error {
-        completion(nil, W3WAddressFinderError.server(e.description))
+        completion(nil, W3WAddressValidatorError.server(e.description))
 
       // parse the resulting JSON
       } else {
@@ -127,8 +133,15 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   }
   
   
+  /// cancel any active API calls
+  public func cancel() {
+    loqate.cancel()
+  }
+
+  
+  
   /// parse the JSON for an address
-  func parseAddress(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data?, completion: @escaping (W3WValidatorNodeLeafInfo, W3WAddressFinderError?) -> ()) {
+  func parseAddress(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data?, completion: @escaping (W3WValidatorNodeLeafInfo, W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
 
     // if the JSON looks good
@@ -175,7 +188,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
 
   
   /// given raw JSON data, and a w3w square, build out the result tree
-  func makeAddressReverseGeoloate(square: W3WSquare, code: Int?, json: Data?, error: W3WAddressFinderError?, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  func makeAddressReverseGeoloate(square: W3WSquare, code: Int?, json: Data?, error: W3WAddressValidatorError?, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     
     // if the JSON is good
     if let j = json {
@@ -192,7 +205,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
 
 
   /// pull data out of a JSON structure and build the results tree
-  func loqateGeolocationResponse(square: W3WSquare, data: W3WLoqateGeolocationResponse, completion: @escaping ([W3WValidatorNode], W3WAddressFinderError?) -> ()) {
+  func loqateGeolocationResponse(square: W3WSquare, data: W3WLoqateGeolocationResponse, completion: @escaping ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
     var itemPairs = [(W3WLoqateItems, W3WLoqateItems)]()
     
     // launch into multiple API calls, but wait until they are all complate
@@ -201,7 +214,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
       
       // check for error
       if item.id == nil && item.type == nil && item.text == nil {
-        completion([], W3WAddressFinderError.server(item.description ?? "unknown error"))
+        completion([], W3WAddressValidatorError.server(item.description ?? "unknown error"))
         return
                    
       // data looks good, make items
@@ -314,7 +327,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   
   
   /// given some JSON make a list of addresses
-  func makeAddressRetrieveResponse(words: String, code: Int?, json: Data?, error: W3WAddressFinderError?, completion: @escaping ([W3WValidatorNodeList], W3WAddressFinderError?) -> ()) {
+  func makeAddressRetrieveResponse(words: String, code: Int?, json: Data?, error: W3WAddressValidatorError?, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
       if let j = json {
         let jsonDecoder = JSONDecoder()
         
