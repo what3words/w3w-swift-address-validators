@@ -16,15 +16,15 @@ public struct W3WStreetAddressUK: W3WStreetAddressProtocol {
   public var locality: String?
   public var postCode: String?
   public var country: String?
-  public var values: [String:Any?] {
+  public var values: [W3WStreeetAddressKey:String?] {
     get {
       return [
-        "words":words,
-        "address":address,
-        "street":street,
-        "locality":locality,
-        "postCode":postCode,
-        "country":country
+        .words:words,
+        .address:address,
+        .street:street,
+        .locality:locality,
+        .postCode:postCode,
+        .country:country
         ]
     }
   }

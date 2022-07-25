@@ -16,15 +16,15 @@ public struct W3WStreetAddressGeneric: W3WStreetAddressProtocol {
   public var city: String?
   public var postCode: String?
   public var country: String?
-  public var values: [String:Any?] {
+  public var values: [W3WStreeetAddressKey:String?] {
     get {
       return [
-        "words":words,
-        "address":address,
-        "street":street,
-        "locality":city,
-        "postCode":postCode,
-        "country":country
+        .words:words,
+        .address:address,
+        .street:street,
+        .locality:city,
+        .postCode:postCode,
+        .country:country
       ]
     }
   }
