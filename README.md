@@ -11,6 +11,13 @@ This package contains code for accessing various address validation services.  T
 
 The library here provides a unified interface for these services via a Swift protocol called `W3WAddressValidatorProtocol`.
 
+#### Example
+
+Example code can be found [here](Examples/GetAddress/GetAddress.xcodeproj) in `/Examples/GetAddress/`.  This uses these validators and a UITableView in a UINavigationController to show how to walk the address tree.
+
+If you don't want to do all the UI work, we recommend that you use our Address Validator component which is available in SwiftUI for watchOS and UIKit for iOS/iPadOS: [https://github.com/what3words/w3w-swift-components-address-validator](https://github.com/what3words/w3w-swift-components-address-validator)
+
+
 #### Interface
 
 `name`: the name of the service (ie: Loqate, Data8)
@@ -22,6 +29,8 @@ The library here provides a unified interface for these services via a Swift pro
 `list(from: completion:)`: given a node returned from a previous call, get any child nodes
 
 `info(for: completion:)`: get detailed info for a particular leaf node returned from a previous call
+
+`cancel()`: to stop a call that is in progress cancelling any tasks
 
 #### Address Tree
 
@@ -96,6 +105,10 @@ public protocol W3WAddressValidatorProtocol {
   /// - parameter for: the node to get details for
   /// - parameter completion: called with a detailed address result
   func info(for: W3WStreetAddressNodeLeaf, completion: @escaping (W3WStreetAddressNodeLeafInfo?, W3WAddressFinderError?) -> ())
+  
+  
+  /// cancel any active tasks
+  func cancel()
 }
 ```
 

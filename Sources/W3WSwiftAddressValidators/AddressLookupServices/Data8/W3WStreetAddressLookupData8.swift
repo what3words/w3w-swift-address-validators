@@ -14,6 +14,9 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   /// represents the Data8 Api
   let data8: W3WRequest!
   
+  /// country to search
+  var country = "GB"
+  
   /// obligatory service name
   public var name: String {
     get {
@@ -31,7 +34,9 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   
   /// Data8 Api wrapper
   /// - parameter key: your Data8 API key
-  public init(key: String) {
+  /// - parameter country: two letter country code (defaults to GB)
+  public init(key: String, country: String = "GB") {
+    self.country = country
     self.data8 = W3WRequest(baseUrl: W3WData8Settings.data8Host, parameters: ["key" : key])
     self.data8.set(headers: ["Referer": "w3w.co"])
   }
@@ -51,7 +56,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
     let json: [String: Any] = [
       "key":             data8.parameters["key"] ?? "",
       "search":          near,
-      "country":         "GB",
+      "country":         country,
       "options":         ["ApplicationName":Bundle.main.bundleIdentifier ?? "what3words"]
     ]
     
@@ -176,18 +181,31 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
 
       // prepare an array
       var addresses = [W3WValidatorNode]()
-      
-      // loop through JSON data
+
+      // if there is a node that contians the what3words address then we just list from there instead of making the user choose what they already chose
       if let results = data.results {
         for result in results {
+          if result.label?.contains(words) ?? false {
+            if result.container == true {
+              let n = W3WValidatorNodeList(id: result.value, words: words, name: result.label ?? "", nearestPlace: "", subItemCount: result.items)
+              self.list(from: n, completion: completion)
+              return
+            }
+          }
+        }
+        
+        // loop through JSON data
+        for result in results {
+          
+          let (name, description) = splitTitleFromDescription(csv: result.label)
           
           // make a list node if there are a bunch of results
           if result.container == true {
-            addresses.append(W3WValidatorNodeList(id: result.value, words: words, name: result.label ?? "", nearestPlace: "", subItemCount: result.items))
+            addresses.append(W3WValidatorNodeList(id: result.value, words: words, name: name, nearestPlace: description, subItemCount: result.items))
             
           // make a leaf node if this is a final address
           } else {
-            addresses.append(W3WValidatorNodeLeaf(id: result.value, words: words, name: result.label ?? "", nearestPlace: ""))
+            addresses.append(W3WValidatorNodeLeaf(id: result.value, words: words, name: name, nearestPlace: description))
           }
         }
       
@@ -209,6 +227,20 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
   }
 
   
+  func splitTitleFromDescription(csv: String?) -> (String, String) {
+    var title = ""
+    var description = ""
+    
+    if let text = csv {
+      let fields = text.split(separator: ",")
+
+      title = firstNonNull(of: fields).first ?? ""
+      description = makeField(from: fields.filter({ x in x != title }), separator: ", ")
+    }
+    
+    return (title, description)
+  }
+  
   
   /// parse Json data for a leaf node
   func parseLeaf(words: String, lastResult: W3WValidatorNodeLeaf?, json: Data, completion: @escaping (W3WValidatorNodeLeafInfo?, W3WAddressValidatorError?) -> ()) {
@@ -229,7 +261,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
           address = W3WStreetAddressUK(
             words: words,
             address: makeField(from: [fullAddress.organisation]),
-            street: makeField(from: [fullAddress.buildingNumber, fullAddress.subBuildingName, fullAddress.buildingName, fullAddress.thoroughfareName, fullAddress.dependentThoroughfareName, fullAddress.thoroughfareDesc, fullAddress.dependentThoroughfareDesc]),
+            street: makeField(from: [fullAddress.subBuildingName, fullAddress.buildingName, fullAddress.thoroughfareName, fullAddress.dependentThoroughfareName, fullAddress.thoroughfareDesc, fullAddress.dependentThoroughfareDesc]),
             locality: fullAddress.locality,
             postCode: fullAddress.postcode,
             country: fullAddress.countryISO2
@@ -240,7 +272,7 @@ public class W3WAddressValidatorData8: W3WAddressValidatorProtocol {
           address = W3WStreetAddressGeneric(
             words: words,
             address: makeField(from: [fullAddress.organisation]),
-            street: makeField(from: [fullAddress.buildingNumber, fullAddress.subBuildingName, fullAddress.buildingName, fullAddress.thoroughfareName, fullAddress.dependentThoroughfareName, fullAddress.thoroughfareDesc, fullAddress.dependentThoroughfareDesc]),
+            street: makeField(from: [fullAddress.subBuildingName, fullAddress.buildingName, fullAddress.thoroughfareName, fullAddress.dependentThoroughfareName, fullAddress.thoroughfareDesc, fullAddress.dependentThoroughfareDesc]),
             city: fullAddress.locality,
             postCode: fullAddress.postcode,
             country: fullAddress.countryISO2

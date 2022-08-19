@@ -19,6 +19,7 @@ struct Record : Codable {
 	let secondarylocality : Secondarylocality?
 	let road : Road?
 	let buildingNumber : BuildingNumber?
+  let what3words : What3words?
 
 	enum CodingKeys: String, CodingKey {
 
@@ -28,6 +29,7 @@ struct Record : Codable {
 		case secondarylocality = "secondarylocality"
 		case road = "road"
 		case buildingNumber = "buildingNumber"
+    case what3words = "what3words"
 	}
 
 	init(from decoder: Decoder) throws {
@@ -38,6 +40,7 @@ struct Record : Codable {
 		secondarylocality = try values.decodeIfPresent(Secondarylocality.self, forKey: .secondarylocality)
 		road = try values.decodeIfPresent(Road.self, forKey: .road)
 		buildingNumber = try values.decodeIfPresent(BuildingNumber.self, forKey: .buildingNumber)
+    what3words = try values.decodeIfPresent(What3words.self, forKey: .what3words)
 	}
 
 }

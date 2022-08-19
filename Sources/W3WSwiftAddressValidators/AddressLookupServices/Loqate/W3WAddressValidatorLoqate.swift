@@ -7,6 +7,7 @@
 
 import Foundation
 import W3WSwiftApi
+import CoreLocation
 
 
 
@@ -46,7 +47,6 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   public init(w3w: W3WProtocolV3, key: String) {
     self.w3w    = w3w
     self.loqate = W3WRequest(baseUrl: W3WLocateSettings.loqateHost, parameters: ["Key" : key])
-    //self.loqateEverything = W3WRequest(baseUrl: W3WLocateSettings.loqateEverythingHost, parameters: ["lqtkey" : key])
   }
   
   
@@ -60,7 +60,7 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
   /// - parameter near: the three word address to search near
   /// - parameter completion: called with new nodes when they are available from the call
   public func search(near: String, completion: @escaping  ([W3WValidatorNode], W3WAddressValidatorError?) -> ()) {
-    
+
     // convert three word address to coordinates
     w3w.convertToCoordinates(words: near) { square, error in
       if let square = square {
@@ -155,14 +155,18 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
 
           // set up the variable for the result
           var address: W3WStreetAddressProtocol!
-          
+
+          let fields = [item.company, item.line1, item.line2, item.line3, item.line4, item.line5]
+          let topField = firstNonNull(of: fields).first
+          let restOfFields = fields.filter({ x in x != topField })
+
           // if the address is in the United Kindgom, make one for that
           if country == "GB" {
             address = W3WStreetAddressUK(
               words: words,
-              address: makeField(from: [item.department, item.company]),
-              street: makeField(from: [item.buildingNumber, item.buildingName, item.subBuilding, item.street], separator: " "),
-              locality: makeField(from: [item.adminAreaName]),
+              address: topField, // makeField(from: [item.company]),
+              street: makeField(from: restOfFields, separator: ", "), // makeField(from: [item.subBuilding, item.buildingNumber, item.street]),
+              locality: nil, //makeField(from: [item.line1, item.line2, item.line3, item.line4]),
               postCode: makeField(from: [item.postalCode]),
               country: country
             )
@@ -171,8 +175,8 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
           } else {
             address = W3WStreetAddressGeneric(
               words: words,
-              address: makeField(from: [item.department, item.company]),
-              street: makeField(from: [item.buildingNumber, item.buildingName, item.subBuilding, item.street], separator: " "),
+              address: topField, // makeField(from: [item.line1, item.department, item.company]),
+              street: makeField(from: restOfFields, separator: ", "), // makeField(from: [item.buildingNumber, item.subBuilding, item.street]),
               city: makeField(from: [item.city]),
               postCode: makeField(from: [item.postalCode]),
               country: country
@@ -358,6 +362,36 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
       completion([], nil)
   }
   
+  
+  /// Convert array of coordinates to the following format
+  /// [[{"lat":52.19400128,"lon":-2.225029029},{"lat":52.18557324,"lon":-2.220275221},{"lat":52.18708847,"lon":-2.205246038},{"lat":52.19734151,"lon":-2.211512537},{"lat":52.19400128,"lon":-2.225029029}]]
+  func toParameterString(coordinates: [CLLocationCoordinate2D]) -> String {
+    var stringCoordinateArray = [String]()
+    
+    for coordinate in coordinates {
+      stringCoordinateArray.append("{\"lat\":\(coordinate.latitude),\"lon\":\(coordinate.longitude)}")
+    }
+    
+    return "[[" + stringCoordinateArray.joined(separator: ",") + "]]"
+  }
+  
+  
+  // MARK: Geographical math
+  
+  
+  func geofence(around: CLLocationCoordinate2D, radiusDegrees: Double, points: Double = 8.0) -> [CLLocationCoordinate2D] {
+    var fence = [CLLocationCoordinate2D]()
+
+    // make a circle around the central point
+    for i in stride(from: 0.0, to: .pi * 2.0, by: .pi / points * 2.0)  {
+      fence.append(CLLocationCoordinate2D(latitude: cos(i) * radiusDegrees + around.latitude, longitude: sin(i) * radiusDegrees + around.longitude))
+    }
+    
+    // cloase the fence
+    fence.append(CLLocationCoordinate2D(latitude: cos(0.0) * radiusDegrees + around.latitude, longitude: sin(0.0) * radiusDegrees + around.longitude))
+
+    return fence
+  }
   
   
 }

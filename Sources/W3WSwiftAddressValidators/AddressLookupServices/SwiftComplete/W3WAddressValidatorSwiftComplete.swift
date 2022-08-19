@@ -30,7 +30,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   /// the name of this service
   public var name: String {
     get {
-      return "Swift Complete"
+      return "Swiftcomplete"
     }
   }
   
@@ -128,7 +128,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
           let code = pieces[1]
 
           // set up the parameters for the api call
-          let params:[String:String] = [
+          var params:[String:String] = [
             "distanceUnits":  "METRIC",
             "populateIndex":  "\(index)",
             "lineFormat\(W3WStreetAddressParts.address.rawValue)":   "Company, SubBuilding, BuildingName",
@@ -138,13 +138,21 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
             "lineFormat\(W3WStreetAddressParts.city.rawValue)":      "TertiaryLocality, SecondaryLocality, PRIMARYLOCALITY",
             "lineFormat\(W3WStreetAddressParts.postCode.rawValue)":  "POSTCODE",
             "lineFormat\(W3WStreetAddressParts.country.rawValue)":   "Country",
-            "maxResults":     "100",
-            "container":      String(code)
           ]
 
+          if code == leaf.words ?? "" {
+            params["biasTowards"] = "///" + code
+          } else {
+            params["maxResults"] = "100"
+            params["container"] = String(code)
+          }
+          
           // call the service and deal with results, and error out gracefully on any issues that arise
           self.swiftComplete.performRequest(path: W3WSwiftCompleteSettings.swiftCompletePath, params: params) { code, json, error in
-            if let j = json {
+            if code != 200 {
+              self.parseError(json: json, completion: { list, error in completion(nil, error) })
+              
+            } else if let j = json {
               self.parseAddress(index: Int(index) ?? 0, words: leaf.words ?? "", lastResult: leaf, json: j) { address, error in
                 completion(address, error)
               }
@@ -187,18 +195,54 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
   
   
   /// parse errors from JSON data
-  func parseErrors(json: Data, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
+  func parseError(json: Data?, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
     let jsonDecoder = JSONDecoder()
     
-    if let errors = try? jsonDecoder.decode(SwiftCompleteErrors.self, from: json) {
-      print(errors)
-      completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
-      return
+    if let json = json {
       
-    } else if let errors = try? jsonDecoder.decode(SwiftCompleteSimpleError.self, from: json) {
-      print(errors)
-      completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
-      return
+      if let error = try? jsonDecoder.decode(SwiftCompleteError.self, from: json) {
+        var description = error.description ?? "Unknown Error"
+        for examples in error.resolutionExamples ?? [] {
+          if let x = examples.example {
+            description += "\n\(x)"
+          }
+          if let x = examples.description {
+            description += "\n\(x)"
+          }
+        }
+        print(description)
+        completion([], W3WAddressValidatorError.server(description))
+        return
+
+      } else if let errors = try? jsonDecoder.decode(SwiftCompleteSimpleError.self, from: json) {
+        print(errors)
+        completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
+        return
+      }
+      
+    }
+    
+    completion([], W3WAddressValidatorError.server("Unknown Error"))
+  }
+
+  
+  /// parse errors from JSON data
+  func parseErrors(json: Data?, completion: @escaping ([W3WValidatorNodeList], W3WAddressValidatorError?) -> ()) {
+    let jsonDecoder = JSONDecoder()
+    
+    if let json = json {
+    
+      if let errors = try? jsonDecoder.decode(SwiftCompleteErrors.self, from: json) {
+        print(errors)
+        completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
+        return
+        
+      } else if let errors = try? jsonDecoder.decode(SwiftCompleteSimpleError.self, from: json) {
+        print(errors)
+        completion([], W3WAddressValidatorError.server(errors.error?.description ?? "Unknown Error"))
+        return
+      }
+    
     }
     
     completion([], W3WAddressValidatorError.server("Unknown Error"))
@@ -222,7 +266,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
           address = W3WStreetAddressUK(
             words: words,
             address: getValue(values: record.lines, index: W3WStreetAddressParts.address.rawValue),
-            street: getValues(values: record.lines, indexes: [W3WStreetAddressParts.number.rawValue, W3WStreetAddressParts.street.rawValue], separator: " "),
+            street: getValues(values: record.lines, indexes: [W3WStreetAddressParts.number.rawValue, W3WStreetAddressParts.street.rawValue]),
             locality: getValue(values: record.lines, index: W3WStreetAddressParts.locality.rawValue),
             postCode: getValue(values: record.lines, index: W3WStreetAddressParts.postCode.rawValue),
             country: getValue(values: record.lines, index: W3WStreetAddressParts.country.rawValue)
@@ -231,7 +275,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
           address = W3WStreetAddressGeneric(
             words: words,
             address: getValue(values: record.lines, index: W3WStreetAddressParts.address.rawValue),
-            street: getValues(values: record.lines, indexes: [W3WStreetAddressParts.number.rawValue, W3WStreetAddressParts.street.rawValue], separator: " "),
+            street: getValues(values: record.lines, indexes: [W3WStreetAddressParts.number.rawValue, W3WStreetAddressParts.street.rawValue]),
             city: getValue(values: record.lines, index: W3WStreetAddressParts.city.rawValue),
             postCode: getValue(values: record.lines, index: W3WStreetAddressParts.postCode.rawValue),
             country: getValue(values: record.lines, index: W3WStreetAddressParts.country.rawValue)
@@ -257,7 +301,7 @@ public class W3WAddressValidatorSwiftComplete: W3WAddressValidatorProtocol {
           addresses.append(W3WValidatorNodeList(id: result.container ?? "", words: words, name: result.primary?.text ?? "", nearestPlace: result.secondary?.text ?? "")) //, address: address))
           
         } else {
-          addresses.append(W3WValidatorNodeLeaf(id: "\(index)§\(lastResult?.code ?? "")", words: words, name: result.primary?.text ?? "", nearestPlace: result.secondary?.text ?? "")) //, address: address))
+          addresses.append(W3WValidatorNodeLeaf(id: "\(index)§\(lastResult?.code ?? words)", words: words, name: result.primary?.text ?? "", nearestPlace: result.secondary?.text ?? "")) //, address: address))
         }
       }
       
