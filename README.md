@@ -5,11 +5,13 @@ Overview
 
 This package contains code for accessing various address validation services.  The services currently supported are:
 
-* Swift Complete - [https://www.swiftcomplete.com](https://www.loqate.com/)
-* Data 8 - [https://www.data-8.co.uk](https://www.loqate.com/)
-* Loqate - [https://www.loqate.com/](https://www.loqate.com/)
+* Swift Complete - [https://www.swiftcomplete.com](https://www.swiftcomplete.com/)
+* Data 8 - [https://www.data-8.co.uk](https://www.data-8.co.uk)
+<!--- * Loqate* - [https://www.loqate.com/](https://www.loqate.com/) --->
 
 The library here provides a unified interface for these services via a Swift protocol called `W3WAddressValidatorProtocol`.
+
+NOTE: There is code to use the [Loqate](https://www.loqate.com/) address service in this package, but it is beta code only and should ***not*** be used in production until further notice.
 
 #### Example
 
@@ -20,7 +22,7 @@ If you don't want to do all the UI work, we recommend that you use our Address V
 
 #### Interface
 
-`name`: the name of the service (ie: Loqate, Data8)
+`name`: the name of the service (ie: Swift Complete, Data8)
 
 `supportsSubitemCounts`: indicates if the service will provide sub item counts
 

@@ -21,8 +21,8 @@ class W3WLocateSettings {
   static public let retrievePath1_2    = "Capture/Interactive/Retrieve/v1.2/json3.ws"
   static public let retreiveNearest    = "Geocoding/UK/RetrieveNearestPlaces/v1.2/wsdlnew.ws"
   static public let findUkV2           = "Geocoding/UK/Find/v2.00/csv.ws"
-  static public let loqateRadius       = 300
-  static public let loqateNumResults   = 32
+  static public let loqateRadius       = "200"
+  static public let loqateNumResults   = "100"
   
   // Constants
   static public let maximumListLengthBeforeBreakingIntoStreets = 6

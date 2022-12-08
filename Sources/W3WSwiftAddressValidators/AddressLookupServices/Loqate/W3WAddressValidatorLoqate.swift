@@ -68,8 +68,8 @@ public class W3WAddressValidatorLoqate: W3WAddressValidatorProtocol {
           let params = [
             "Latitude":   String(coordinates.latitude),
             "Longitude":  String(coordinates.longitude),
-            "Items":      "100",
-            "Radius":     "200"
+            "Items":      W3WLocateSettings.loqateNumResults,
+            "Radius":     W3WLocateSettings.loqateRadius
           ]
           
           // make the top node in the reaults tree

@@ -138,10 +138,10 @@ public class W3WRequest {
       // DEBUG
       print("calling: ", url)
       
-      // create teh request
+      // create the request
       var request = URLRequest(url: url)
       
-      // set the request method ei GET, POST, etc
+      // set the request method ie: GET, POST, etc
       request.httpMethod = method.rawValue
 
       // add any json
